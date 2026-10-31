@@ -1,0 +1,28 @@
+(() => {
+  const cover = document.getElementById('cover');
+  const site = document.getElementById('site');
+  const openBtn = document.getElementById('open-invitation');
+  const canvas = document.getElementById('magic-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [], width = 0, height = 0, opened = false;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function resize(){ width = canvas.width = window.innerWidth * devicePixelRatio; height = canvas.height = window.innerHeight * devicePixelRatio; canvas.style.width = window.innerWidth+'px'; canvas.style.height = window.innerHeight+'px'; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+  window.addEventListener('resize', resize); resize();
+  function createParticle(burst=false){ return {x:Math.random()*window.innerWidth,y:burst?window.innerHeight*(.25+Math.random()*.5):-10,r:Math.random()*2.2+.4,vx:(Math.random()-.5)*(burst?4:.45),vy:Math.random()*(burst?5:1.2)+.25,alpha:Math.random()*.65+.2,life:burst?Math.random()*100+40:Infinity,petal:Math.random()<.12,rot:Math.random()*6.28,vr:(Math.random()-.5)*.04}; }
+  for(let i=0;i<(reducedMotion?22:90);i++)particles.push(createParticle());
+  function animate(){ctx.clearRect(0,0,window.innerWidth,window.innerHeight);for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;if(p.life!==Infinity)p.life--;ctx.save();ctx.globalAlpha=p.alpha*(p.life<30?Math.max(0,p.life/30):1);ctx.translate(p.x,p.y);ctx.rotate(p.rot);if(p.petal){ctx.fillStyle='#d95b73';ctx.beginPath();ctx.ellipse(0,0,2.3,4.4,0,0,Math.PI*2);ctx.fill()}else{ctx.fillStyle=Math.random()>.5?'#f4d58c':'#fff0c6';ctx.shadowColor='#ffd875';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill()}ctx.restore();if(p.y>window.innerHeight+20||p.x<-20||p.x>window.innerWidth+20||p.life<=0)particles[i]=createParticle();}if(opened&&!reducedMotion&&particles.length<150&&Math.random()<.18)particles.push(createParticle());requestAnimationFrame(animate);}
+  animate();
+  openBtn.addEventListener('click',()=>{if(opened)return;opened=true;for(let i=0;i<(reducedMotion?20:140);i++)particles.push(createParticle(true));cover.classList.add('opened');site.classList.add('visible');site.removeAttribute('inert');document.body.classList.remove('locked');setTimeout(()=>{cover.style.display='none';document.getElementById('home').scrollIntoView({behavior:reducedMotion?'auto':'smooth'});},1050);});
+  // Countdown targets local Indian time, beginning at midnight on the wedding date.
+  const target = new Date('2026-11-29T00:00:00+05:30').getTime();
+  function updateCountdown(){let diff=target-Date.now();if(diff<=0){['days','hours','minutes','seconds'].forEach(id=>document.getElementById(id).textContent='00');return;}const vals={days:Math.floor(diff/86400000),hours:Math.floor(diff%86400000/3600000),minutes:Math.floor(diff%3600000/60000),seconds:Math.floor(diff%60000/1000)};Object.entries(vals).forEach(([id,val])=>document.getElementById(id).textContent=String(val).padStart(2,'0'));}
+  updateCountdown();setInterval(updateCountdown,1000);
+  const observer = new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('in-view');observer.unobserve(entry.target);}}),{threshold:.12});document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+  const nav=document.getElementById('nav'),menu=document.getElementById('menu-toggle');menu.addEventListener('click',()=>{const on=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(on));});nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menu.setAttribute('aria-expanded','false');}));
+  // Lightweight synthesized ambient tones; starts only after an explicit visitor click.
+  let audioCtx=null,oscillators=[],gain=null,musicOn=false;const musicBtn=document.getElementById('music-toggle');
+  function stopMusic(){if(gain){gain.gain.setTargetAtTime(0,audioCtx.currentTime,.2);setTimeout(()=>{oscillators.forEach(o=>{try{o.stop()}catch(e){}});oscillators=[];if(audioCtx){audioCtx.close();audioCtx=null;}gain=null;},700);}musicOn=false;musicBtn.setAttribute('aria-pressed','false');musicBtn.innerHTML='♫ <span>Music off</span>';}
+  function startMusic(){const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext){musicBtn.innerHTML='♫ <span>Not supported</span>';return;}audioCtx=new AudioContext();gain=audioCtx.createGain();gain.gain.value=.018;gain.connect(audioCtx.destination);[220,329.63,440].forEach((freq,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.value=[.35,.22,.13][i];o.connect(g);g.connect(gain);o.start();oscillators.push(o);});musicOn=true;musicBtn.setAttribute('aria-pressed','true');musicBtn.innerHTML='♫ <span>Music on</span>';}
+  musicBtn.addEventListener('click',()=>musicOn?stopMusic():startMusic());
+  document.getElementById('rsvp-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('guest-name').value.trim(),attendance=document.getElementById('attendance').value,note=document.getElementById('guest-note').value.trim();const subject=encodeURIComponent('Wedding RSVP — Saba Mahek & Mohammed Zaid');const body=encodeURIComponent(`Name: ${name}\nResponse: ${attendance}\nNote: ${note||'—'}\n\nWedding date: 29 November 2026`);document.getElementById('rsvp-status').textContent='Your email app should open with your RSVP details ready to send.';window.location.href=`mailto:?subject=${subject}&body=${body}`;});
+})();
